@@ -1,4 +1,4 @@
-const CACHE_NAME = "protex-cctv-v2";
+const CACHE_NAME = "protex-cctv-v3";
 const STATIC_ASSETS = [
   "./",
   "./index.html",
