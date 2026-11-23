@@ -1,0 +1,647 @@
+<!DOCTYPE html>
+<html lang="sr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="theme-color" content="#0b1020" />
+  <link rel="manifest" href="./manifest.json" />
+  <link rel="apple-touch-icon" href="./icon-192.png" />
+  <title>Protex • CCTV Proračun (Realtime Database)</title>
+  <style>
+    :root {
+      --bg: #0b1020;
+      --surface: #131c31;
+      --surface-2: #1a2540;
+      --border: #2a395e;
+      --text: #f1f5f9;
+      --muted: #94a3b8;
+      --accent: #38bdf8;
+      --accent-2: #22c55e;
+      --warn: #f59e0b;
+      --danger: #ef4444;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: system-ui, -apple-system, Segoe UI, Roboto, sans-serif;
+      background: linear-gradient(160deg, #090d1a 0%, #101930 100%);
+      color: var(--text);
+      min-height: 100vh;
+      padding-bottom: 92px;
+    }
+    header {
+      position: sticky;
+      top: 0;
+      z-index: 20;
+      background: rgba(11, 16, 32, 0.92);
+      backdrop-filter: blur(8px);
+      border-bottom: 1px solid var(--border);
+      padding: 12px 16px;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      align-items: center;
+      justify-content: space-between;
+    }
+    .brand { font-weight: 700; font-size: 1.05rem; letter-spacing: 0.2px; }
+    .badges { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+    .badge {
+      font-size: 0.75rem;
+      padding: 4px 10px;
+      border-radius: 999px;
+      border: 1px solid var(--border);
+      background: var(--surface);
+    }
+    .badge.ok { border-color: rgba(34,197,94,.45); color: #86efac; }
+    .badge.off { border-color: rgba(245,158,11,.45); color: #fcd34d; }
+    nav {
+      display: flex;
+      gap: 8px;
+      padding: 10px 16px 0;
+      max-width: 1120px;
+      margin: 0 auto;
+      flex-wrap: wrap;
+    }
+    nav button {
+      background: var(--surface);
+      color: var(--muted);
+      border: 1px solid var(--border);
+      padding: 9px 14px;
+      border-radius: 10px;
+      cursor: pointer;
+      font-weight: 600;
+    }
+    nav button.active {
+      background: var(--accent);
+      color: #061220;
+      border-color: var(--accent);
+    }
+    main {
+      max-width: 1120px;
+      margin: 14px auto 0;
+      padding: 0 16px;
+    }
+    .grid-2 {
+      display: grid;
+      grid-template-columns: 1.15fr 1fr;
+      gap: 16px;
+    }
+    @media (max-width: 860px) {
+      .grid-2 { grid-template-columns: 1fr; }
+    }
+    .card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      padding: 14px;
+      margin-bottom: 14px;
+    }
+    h2 { margin: 0 0 12px; font-size: 1rem; color: #e2e8f0; }
+    label { display: block; font-size: 0.8rem; color: var(--muted); margin-bottom: 4px; }
+    input, select, textarea {
+      width: 100%;
+      background: var(--surface-2);
+      color: var(--text);
+      border: 1px solid var(--border);
+      border-radius: 9px;
+      padding: 9px 11px;
+      font-size: 0.92rem;
+    }
+    input:focus, select:focus, textarea:focus { outline: 2px solid var(--accent); outline-offset: 1px; }
+    .row-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 10px; }
+    .row-3 { display: grid; grid-template-columns: 1.6fr 0.8fr 0.8fr; gap: 10px; margin-bottom: 10px; align-items: end; }
+    button.btn {
+      background: var(--accent);
+      color: #051322;
+      border: none;
+      border-radius: 9px;
+      padding: 9px 14px;
+      font-weight: 700;
+      cursor: pointer;
+    }
+    button.btn.secondary { background: var(--surface-2); color: var(--text); border: 1px solid var(--border); }
+    button.btn.green { background: var(--accent-2); color: #052010; }
+    button.btn.danger { background: rgba(239,68,68,.15); color: #fca5a5; border: 1px solid rgba(239,68,68,.4); padding: 5px 9px; font-size: 0.8rem; }
+    table { width: 100%; border-collapse: collapse; font-size: 0.86rem; }
+    th, td { padding: 8px 6px; border-bottom: 1px solid rgba(148,163,184,.14); text-align: left; }
+    th { color: var(--muted); font-weight: 600; }
+    .num { text-align: right; white-space: nowrap; }
+    .qty-input { width: 72px; padding: 5px 7px; text-align: right; }
+    .summary-bar {
+      position: fixed;
+      left: 0; right: 0; bottom: 0;
+      background: rgba(11, 16, 32, 0.96);
+      border-top: 1px solid var(--border);
+      padding: 10px 16px;
+      z-index: 30;
+    }
+    .summary-inner {
+      max-width: 1120px;
+      margin: 0 auto;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 12px;
+      align-items: center;
+      justify-content: space-between;
+    }
+    .totals { display: flex; gap: 18px; flex-wrap: wrap; align-items: baseline; }
+    .totals strong { font-size: 1.15rem; color: #38bdf8; }
+    .muted { color: var(--muted); font-size: 0.82rem; }
+    .job-item {
+      background: var(--surface-2);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 10px 12px;
+      margin-bottom: 8px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 10px;
+    }
+    .hidden { display: none; }
+    code { background: #0b1020; padding: 2px 6px; border-radius: 5px; font-size: 0.8rem; }
+  </style>
+</head>
+<body>
+  <header>
+    <div class="brand">Protex • CCTV Proračun</div>
+    <div class="badges">
+      <span id="netBadge" class="badge ok">Online</span>
+      <span id="dbBadge" class="badge off">Povezivanje na protex-1e84d...</span>
+    </div>
+  </header>
+
+  <nav>
+    <button id="tabCalc" class="active" onclick="switchTab('calc')">Proračun</button>
+    <button id="tabJobs" onclick="switchTab('jobs')">Sačuvani poslovi (<span id="jobsCount">0</span>)</button>
+    <button id="tabConfig" onclick="switchTab('config')">Firebase & Cenovnik</button>
+  </nav>
+
+  <main>
+    <section id="viewCalc">
+      <div class="card">
+        <h2>Podaci o objektu / poslu</h2>
+        <div class="row-2">
+          <div>
+            <label for="jobTitle">Naziv posla / klijent</label>
+            <input id="jobTitle" type="text" placeholder="npr. Magacin Zemun - 6 IP kamera" />
+          </div>
+          <div>
+            <label for="jobStatus">Status</label>
+            <select id="jobStatus">
+              <option value="Nacrt">Nacrt</option>
+              <option value="Ponuda poslata">Ponuda poslata</option>
+              <option value="Odobreno">Odobreno</option>
+              <option value="Završeno">Završeno</option>
+            </select>
+          </div>
+        </div>
+        <div class="row-2">
+          <div>
+            <label for="marginPct">Marža na opremu i materijal (%)</label>
+            <input id="marginPct" type="number" step="1" value="20" oninput="recalc()" />
+          </div>
+          <div>
+            <label for="laborCost">Rad i montaža (RSD)</label>
+            <input id="laborCost" type="number" step="100" value="0" oninput="recalc()" />
+          </div>
+        </div>
+      </div>
+
+      <div class="grid-2">
+        <div class="card">
+          <h2>Dodavanje opreme i materijala (<span id="catalogCount">169</span> artikala)</h2>
+          <div class="row-2">
+            <div>
+              <label for="catFilter">Kategorija</label>
+              <select id="catFilter" onchange="renderCatalogSelect()"></select>
+            </div>
+            <div>
+              <label for="searchInput">Brza pretraga</label>
+              <input id="searchInput" type="text" placeholder="npr. HDW2541, NVR, 4TB, 305M, RJ45..." oninput="renderCatalogSelect()" />
+            </div>
+          </div>
+          <div class="row-3">
+            <div>
+              <label for="itemSelect">Artikal</label>
+              <select id="itemSelect"></select>
+            </div>
+            <div>
+              <label for="itemQty">Količina</label>
+              <input id="itemQty" type="number" min="0.1" step="any" value="1" onkeydown="if(event.key==='Enter') addSelectedItem()" />
+            </div>
+            <div>
+              <button class="btn" style="width:100%" onclick="addSelectedItem()">+ Dodaj</button>
+            </div>
+          </div>
+          <div id="selectedPreview" class="muted">Izaberi artikal za prikaz nabavne cene.</div>
+        </div>
+
+        <div class="card">
+          <h2>Stavke u proračunu</h2>
+          <div style="overflow-x:auto">
+            <table>
+              <thead>
+                <tr>
+                  <th>Artikal</th>
+                  <th class="num">Kol.</th>
+                  <th class="num">Prodajna</th>
+                  <th class="num">Ukupno</th>
+                  <th></th>
+                </tr>
+              </thead>
+              <tbody id="quoteBody">
+                <tr><td colspan="5" class="muted">Nema dodatih stavki.</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section id="viewJobs" class="hidden">
+      <div class="card">
+        <h2>Sačuvani poslovi (Realtime Database + lokalni keš)</h2>
+        <div id="jobsList"><p class="muted">Nema sačuvanih poslova.</p></div>
+      </div>
+    </section>
+
+    <section id="viewConfig" class="hidden">
+      <div class="card">
+        <h2>Firebase Realtime Database (protex-1e84d)</h2>
+        <p class="muted">Tvoj Firebase config je već ugrađen u aplikaciju. Ako se tvoj <code>databaseURL</code> razlikuje od podrazumevanog (npr. <code>europe-west1</code>), možeš ga promeniti ispod i kliknuti <strong>Sačuvaj URL i poveži</strong>.</p>
+        <label for="dbUrlInput">Database URL (iz Firebase Realtime Database konzole)</label>
+        <input id="dbUrlInput" type="text" value="https://protex-1e84d-default-rtdb.firebaseio.com" />
+        <div style="margin-top:10px;display:flex;gap:10px;flex-wrap:wrap;">
+          <button class="btn" onclick="updateDatabaseUrl()">Sačuvaj URL i poveži</button>
+          <button class="btn green" onclick="seedCatalogToRtdb()">Uvezi sve artikle u bazu (/catalog)</button>
+        </div>
+        <div id="configStatus" class="muted" style="margin-top:10px;"></div>
+      </div>
+    </section>
+  </main>
+
+  <div class="summary-bar">
+    <div class="summary-inner">
+      <div class="totals">
+        <div><span class="muted">Nabavna:</span> <span id="sumCost">0,00 RSD</span></div>
+        <div><span class="muted">Oprema + marža:</span> <span id="sumEquip">0,00 RSD</span></div>
+        <div><span class="muted">UKUPNO:</span> <strong id="sumGrand">0,00 RSD</strong></div>
+      </div>
+      <div style="display:flex;gap:8px;">
+        <button class="btn secondary" onclick="clearQuote()">Reset</button>
+        <button class="btn green" onclick="saveJob()">Sačuvaj posao</button>
+      </div>
+    </div>
+  </div>
+
+  <script type="module">
+    import { initializeApp, getApps, deleteApp } from "https://www.gstatic.com/firebasejs/11.0.0/firebase-app.js";
+    import { getDatabase, ref, set, onValue, remove } from "https://www.gstatic.com/firebasejs/11.0.0/firebase-database.js";
+
+    const DEFAULT_CATALOG = [{"id": "cam-001", "kategorija": "Kamere", "naziv": "DAHUA IPC-HDW2541TM-S 5MP 2.8MM", "naziv_opreme": "DAHUA IPC-HDW2541TM-S 2.8mm 5 megapiksela dome kamera", "jedinica_mere": "kom", "nabavna_cena_rsd": 13296.96, "marza_procenat": 20, "aktivan": true}, {"id": "cam-002", "kategorija": "Kamere", "naziv": "DAHUA IPC-HDW2249TM-S-IL 2MP 2.8MM", "naziv_opreme": "DAHUA IPC-HDW2249TM-S-IL 2.8mm 2 megapiksela dome kamera", "jedinica_mere": "kom", "nabavna_cena_rsd": 13571.71, "marza_procenat": 20, "aktivan": true}, {"id": "cam-003", "kategorija": "Kamere", "naziv": "DAHUA IPC-HDBW1430DE-SW 4MP 2.8MM", "naziv_opreme": "DAHUA IPC-HDBW1430DE-SW 2.8mm 4 megapiksela dome WiFi kamera", "jedinica_mere": "kom", "nabavna_cena_rsd": 9176.33, "marza_procenat": 20, "aktivan": true}, {"id": "cam-004", "kategorija": "Kamere", "naziv": "DAHUA SD22204DB-GNY 2MP PTZ", "naziv_opreme": "DAHUA SD22204DB-GNY 2MP dome kamera, motorizovani zum", "jedinica_mere": "kom", "nabavna_cena_rsd": 16999.2, "marza_procenat": 20, "aktivan": true}, {"id": "cam-005", "kategorija": "Kamere", "naziv": "DAHUA IPC-HDW1639T-A-IL 6MP 2.8MM", "naziv_opreme": "DAHUA IPC-HDW1639T-A-IL 2.8mm 6 megapiksela dome kamera", "jedinica_mere": "kom", "nabavna_cena_rsd": 9253.44, "marza_procenat": 20, "aktivan": true}, {"id": "cam-006", "kategorija": "Kamere", "naziv": "DAHUA IPC-HDW2441TM-S 4MP 2.8MM", "naziv_opreme": "DAHUA IPC-HDW2441TM-S 2.8mm 4 megapiksela dome kamera", "jedinica_mere": "kom", "nabavna_cena_rsd": 12519.36, "marza_procenat": 20, "aktivan": true}, {"id": "cam-007", "kategorija": "Kamere", "naziv": "DAHUA IPC-HDW1439V-A-IL 4MP 2.8MM", "naziv_opreme": "DAHUA IPC-HDW1439V-A-IL 2.8mm 4 megapiksela dome kamera", "jedinica_mere": "kom", "nabavna_cena_rsd": 7942.54, "marza_procenat": 20, "aktivan": true}, {"id": "cam-008", "kategorija": "Kamere", "naziv": "DAHUA IPC-HFW1439TL1-A-IL 4MP 2.8MM", "naziv_opreme": "DAHUA IPC-HFW1439TL1-A-IL 2.8mm 4 megapiksela bullet kamera", "jedinica_mere": "kom", "nabavna_cena_rsd": 7942.54, "marza_procenat": 20, "aktivan": true}, {"id": "cam-009", "kategorija": "Kamere", "naziv": "DAHUA IPC-HFW1639TC-A-IL 6MP 2.8MM", "naziv_opreme": "DAHUA IPC-HFW1639TC-A-IL 2.8mm 6 megapiksela bullet kamera", "jedinica_mere": "kom", "nabavna_cena_rsd": 8328.1, "marza_procenat": 20, "aktivan": true}, {"id": "cam-010", "kategorija": "Kamere", "naziv": "DAHUA IPC-HFW1530S 5MP 2.8MM", "naziv_opreme": "DAHUA IPC-HFW1530S 2.8mm 5 megapiksela bullet kamera", "jedinica_mere": "kom", "nabavna_cena_rsd": 9033.12, "marza_procenat": 20, "aktivan": true}, {"id": "cam-011", "kategorija": "Kamere", "naziv": "DAHUA IPC-HDW2241T-ZS 2MP 2.7MM-13.5MM", "naziv_opreme": "DAHUA IPC-HDW2241T-ZS 2.7mm-13.5mm 2 megapiksela dome kamera", "jedinica_mere": "kom", "nabavna_cena_rsd": 12742.8, "marza_procenat": 20, "aktivan": true}, {"id": "cam-012", "kategorija": "Kamere", "naziv": "DAHUA IPC-HDW1239V-A-IL 2MP 2.8MM", "naziv_opreme": "DAHUA IPC-HDW1239V-A-IL 2.8mm 2 megapiksela dome kamera", "jedinica_mere": "kom", "nabavna_cena_rsd": 7017.19, "marza_procenat": 20, "aktivan": true}, {"id": "cam-013", "kategorija": "Kamere", "naziv": "DAHUA IPC-HDBW1230DE-SW 2MP 2.8MM", "naziv_opreme": "DAHUA IPC-HDBW1230DE-SW 2.8mm 2 megapiksela dome WiFi kamera", "jedinica_mere": "kom", "nabavna_cena_rsd": 7942.54, "marza_procenat": 20, "aktivan": true}, {"id": "cam-014", "kategorija": "Kamere", "naziv": "DAHUA IPC-HFW1230DS-SAW 2MP 2.8MM", "naziv_opreme": "DAHUA IPC-HFW1230DS-SAW 2.8mm 2 megapiksela bullet WiFi kamera", "jedinica_mere": "kom", "nabavna_cena_rsd": 7942.54, "marza_procenat": 20, "aktivan": true}, {"id": "cam-015", "kategorija": "Kamere", "naziv": "DAHUA F5D-PV WIFI 5MP 2.8MM", "naziv_opreme": "DAHUA F5D-PV WiFi 2.8mm bullet kamera", "jedinica_mere": "kom", "nabavna_cena_rsd": 5706.29, "marza_procenat": 20, "aktivan": true}, {"id": "cam-016", "kategorija": "Kamere", "naziv": "DAHUA IPC-HDBW1230E 2MP 2.8MM", "naziv_opreme": "DAHUA IPC-HDBW1230E 2 megapiksela dome kamera 2.8mm", "jedinica_mere": "kom", "nabavna_cena_rsd": 5860.51, "marza_procenat": 20, "aktivan": true}, {"id": "cam-017", "kategorija": "Kamere", "naziv": "DAHUA IPC-HDW1230S 2MP 2.8MM", "naziv_opreme": "DAHUA IPC-HDW1230S 2.8mm 2 megapiksela dome kamera", "jedinica_mere": "kom", "nabavna_cena_rsd": 6168.96, "marza_procenat": 20, "aktivan": true}, {"id": "cam-018", "kategorija": "Kamere", "naziv": "DAHUA IPC-HFW1239TL1-A-IL 2MP 2.8MM", "naziv_opreme": "DAHUA IPC-HFW1239TL1-A-IL 2.8mm bullet kamera", "jedinica_mere": "kom", "nabavna_cena_rsd": 6246.07, "marza_procenat": 20, "aktivan": true}, {"id": "cam-019", "kategorija": "Kamere", "naziv": "HIKVISION DS-2CD1041G2-LIU 4MP 2.8MM IP", "naziv_opreme": "HikVision DS-2CD1041G2-LIU 2.8mm 4 megapiksela bullet IP kamera", "jedinica_mere": "kom", "nabavna_cena_rsd": 5788.8, "marza_procenat": 20, "aktivan": true}, {"id": "cam-020", "kategorija": "Kamere", "naziv": "HIKVISION DS-2CD1141G2-LIU 4MP 2.8MM IP", "naziv_opreme": "HikVision DS-2CD1141G2-LIU 2.8mm 4 megapiksela dome IP kamera", "jedinica_mere": "kom", "nabavna_cena_rsd": 5811.12, "marza_procenat": 20, "aktivan": true}, {"id": "cam-021", "kategorija": "Kamere", "naziv": "HIKVISION DS-2CD1023G2-LIU 2MP 2.8MM IP", "naziv_opreme": "HikVision DS-2CD1023G2-LIU 2.8mm 2 megapiksela bullet IP kamera", "jedinica_mere": "kom", "nabavna_cena_rsd": 5937.12, "marza_procenat": 20, "aktivan": true}, {"id": "cam-022", "kategorija": "Kamere", "naziv": "HIKVISION DS-2CD1341G2-LIU 4MP 2.8MM IP", "naziv_opreme": "HikVision DS-2CD1341G2-LIU 2.8mm 4 megapiksela dome IP kamera", "jedinica_mere": "kom", "nabavna_cena_rsd": 6010.56, "marza_procenat": 20, "aktivan": true}, {"id": "cam-023", "kategorija": "Kamere", "naziv": "HIKVISION DS-2CD1321-I 2MP 2.8MM IP", "naziv_opreme": "HikVision DS-2CD1321-I 2.8mm 2 megapiksela dome IP kamera", "jedinica_mere": "kom", "nabavna_cena_rsd": 4650.48, "marza_procenat": 20, "aktivan": true}, {"id": "cam-024", "kategorija": "Kamere", "naziv": "HILOOK IPC-B140HA-LU 4MP 2.8MM IP KAMERA", "naziv_opreme": "HiLook IPC-B140HA-LU 2.8mm 4 megapiksela bullet IP kamera", "jedinica_mere": "kom", "nabavna_cena_rsd": 4772.88, "marza_procenat": 20, "aktivan": true}, {"id": "cam-025", "kategorija": "Kamere", "naziv": "DAHUA F3D-PV WIFI 3MP 2.8MM", "naziv_opreme": "DAHUA F3D-PV WiFi 2.8mm 3 megapiksela bullet kamera", "jedinica_mere": "kom", "nabavna_cena_rsd": 4497.12, "marza_procenat": 20, "aktivan": true}, {"id": "cam-026", "kategorija": "Kamere", "naziv": "DAHUA IPC-T1E20-A 2MP 2.8MM", "naziv_opreme": "DAHUA IPC-T1E20-A 2.8mm 2 megapiksela dome kamera", "jedinica_mere": "kom", "nabavna_cena_rsd": 4703.83, "marza_procenat": 20, "aktivan": true}, {"id": "cam-027", "kategorija": "Kamere", "naziv": "HILOOK IPC-B120HA-LU 2MP 2.8MM IP KAMERA", "naziv_opreme": "HiLook IPC-B120HA-LU 2.8mm 2 megapiksela bullet IP kamera", "jedinica_mere": "kom", "nabavna_cena_rsd": 3611.52, "marza_procenat": 20, "aktivan": true}, {"id": "cam-028", "kategorija": "Kamere", "naziv": "HIKVISION DS-2CD1021G2-LIU 2MP 2.8MM IP", "naziv_opreme": "HikVision DS-2CD1021G2-LIU 2.8mm 2 megapiksela bullet IP kamera", "jedinica_mere": "kom", "nabavna_cena_rsd": 3810.24, "marza_procenat": 20, "aktivan": true}, {"id": "cam-029", "kategorija": "Kamere", "naziv": "HIKVISION DS-2CD1321G2-LIU 2MP 2.8MM IP", "naziv_opreme": "HikVision DS-2CD1321G2-LIU 2.8mm 2 megapiksela dome IP kamera", "jedinica_mere": "kom", "nabavna_cena_rsd": 4305.6, "marza_procenat": 20, "aktivan": true}, {"id": "cam-030", "kategorija": "Kamere", "naziv": "HIKVISION DS-2CD1021-I 2MP 2.8MM IP", "naziv_opreme": "HikVision DS-2CD1021-I 2.8mm 2 megapiksela bullet IP kamera", "jedinica_mere": "kom", "nabavna_cena_rsd": 4650.48, "marza_procenat": 20, "aktivan": true}, {"id": "cam-031", "kategorija": "Kamere", "naziv": "DAHUA IPC-HDW2531TM-AS 5MP 2.8MM", "naziv_opreme": "DAHUA IPC-HDW2531TM-AS 2.8mm 5 megapiksela dome kamera", "jedinica_mere": "kom", "nabavna_cena_rsd": 13757.04, "marza_procenat": 20, "aktivan": true}, {"id": "cam-032", "kategorija": "Kamere", "naziv": "DAHUA IPC-HFW2249M-S-B-PRO 2MP 3.6MM", "naziv_opreme": "DAHUA IPC-HFW2249M-S-B-PRO 3.6mm 2 megapiksela bullet kamera", "jedinica_mere": "kom", "nabavna_cena_rsd": 16579.08, "marza_procenat": 20, "aktivan": true}, {"id": "cam-033", "kategorija": "Kamere", "naziv": "DAHUA IPC-HDBW5241R-ASE 2MP 2.8MM", "naziv_opreme": "DAHUA IPC-HDBW5241R-ASE 2.8mm 2 megapiksela dome kamera", "jedinica_mere": "kom", "nabavna_cena_rsd": 19123.78, "marza_procenat": 20, "aktivan": true}, {"id": "cam-034", "kategorija": "Kamere", "naziv": "DAHUA IPC-HDW1431T1 4MP 2.8MM", "naziv_opreme": "DAHUA IPC-HDW1431T1 2.8mm 4 megapiksela dome kamera", "jedinica_mere": "kom", "nabavna_cena_rsd": 5106.0, "marza_procenat": 20, "aktivan": true}, {"id": "cam-035", "kategorija": "Kamere", "naziv": "DAHUA IPC-HDBW1430DE-SW 4MP 2.8MM (slika 38)", "naziv_opreme": "DAHUA IPC-HDBW1430DE-SW 2.8mm 4 megapiksela dome WiFi kamera", "jedinica_mere": "kom", "nabavna_cena_rsd": 9176.33, "marza_procenat": 20, "aktivan": true}, {"id": "cam-036", "kategorija": "Kamere", "naziv": "DAHUA F3D-PV WIFI 3MP 2.8MM (slika 39)", "naziv_opreme": "DAHUA F3D-PV WiFi 2.8mm 3 megapiksela bullet kamera", "jedinica_mere": "kom", "nabavna_cena_rsd": 4497.12, "marza_procenat": 20, "aktivan": true}, {"id": "cam-037", "kategorija": "Kamere", "naziv": "DAHUA F5D-PV WIFI 5MP 2.8MM (slika 39)", "naziv_opreme": "DAHUA F3D-PV WiFi 2.8mm 3 megapiksela bullet kamera (naziv: DAHUA F5D-PV WIFI 5MP 2.8MM)", "jedinica_mere": "kom", "nabavna_cena_rsd": 5706.29, "marza_procenat": 20, "aktivan": true}, {"id": "cam-038", "kategorija": "Kamere", "naziv": "DAHUA IPC-HDBW1230DE-SW 2MP 2.8MM (slika 39)", "naziv_opreme": "DAHUA IPC-HDBW1230DE-SW 2.8mm 2 megapiksela dome WiFi kamera", "jedinica_mere": "kom", "nabavna_cena_rsd": 7942.54, "marza_procenat": 20, "aktivan": true}, {"id": "cam-039", "kategorija": "Kamere", "naziv": "DAHUA IPC-HFW1230DS-SAW 2MP 2.8MM (slika 39)", "naziv_opreme": "DAHUA IPC-HFW1230DS-SAW 2.8mm 2 megapiksela bullet WiFi kamera", "jedinica_mere": "kom", "nabavna_cena_rsd": 7942.54, "marza_procenat": 20, "aktivan": true}, {"id": "nvr-001", "kategorija": "NVR snimači", "naziv": "DAHUA NVR4116HS-4KS3 16 KANALNI NVR", "naziv_opreme": "DAHUA NVR4116HS-4KS3 16 kanalni NVR 8MP", "jedinica_mere": "kom", "nabavna_cena_rsd": 15730.85, "marza_procenat": 20, "aktivan": true}, {"id": "nvr-002", "kategorija": "NVR snimači", "naziv": "DAHUA NVR4216HS-4KS3 16-KANALNI NVR", "naziv_opreme": "DAHUA NVR4216HS-4KS3 16 kanalni NVR 8MP", "jedinica_mere": "kom", "nabavna_cena_rsd": 17735.76, "marza_procenat": 20, "aktivan": true}, {"id": "nvr-003", "kategorija": "NVR snimači", "naziv": "HIKVISION DS-7616NXI-K2(D) 16 KANALNI NVR SNIMAČ", "naziv_opreme": "HikVision DS-7616NXI-K2(D) 16 kanalni mrežni NVR snimač", "jedinica_mere": "kom", "nabavna_cena_rsd": 23686.56, "marza_procenat": 20, "aktivan": true}, {"id": "nvr-004", "kategorija": "NVR snimači", "naziv": "DAHUA NVR4232-4KS3 32 KANALNI NVR", "naziv_opreme": "DAHUA NVR4232-4KS3 32 kanalni NVR 8MP", "jedinica_mere": "kom", "nabavna_cena_rsd": 28839.89, "marza_procenat": 20, "aktivan": true}, {"id": "nvr-005", "kategorija": "NVR snimači", "naziv": "TIANDY TC-R3110 NVR ZA 10 IP KAMERA DO 5MP", "naziv_opreme": "Tiandy TC-R3110 NVR snimač za 10 IP kamera do 5MP sa 8 POE porta", "jedinica_mere": "kom", "nabavna_cena_rsd": 11879.34, "marza_procenat": 20, "aktivan": true}, {"id": "nvr-006", "kategorija": "NVR snimači", "naziv": "DAHUA NVR4104HS-4KS3 4 KANALNI NVR", "naziv_opreme": "DAHUA NVR4104HS-4KS3 4 kanalni NVR 8MP", "jedinica_mere": "kom", "nabavna_cena_rsd": 12723.48, "marza_procenat": 20, "aktivan": true}, {"id": "nvr-007", "kategorija": "NVR snimači", "naziv": "DAHUA NVR4108HS-4KS3 8 KANALNI NVR", "naziv_opreme": "DAHUA NVR4108HS-4KS3 8 kanalni NVR 12MP", "jedinica_mere": "kom", "nabavna_cena_rsd": 13648.82, "marza_procenat": 20, "aktivan": true}, {"id": "nvr-008", "kategorija": "NVR snimači", "naziv": "HIKVISION DS-7608NXI-K1(D) 8 KANALNI NVR SNIMAČ", "naziv_opreme": "HikVision DS-7608NXI-K1(D) 8 kanalni mrežni NVR snimač", "jedinica_mere": "kom", "nabavna_cena_rsd": 17420.4, "marza_procenat": 20, "aktivan": true}, {"id": "nvr-009", "kategorija": "NVR snimači", "naziv": "HILOOK NVR-104H-D 4 KANALNI MINI NVR", "naziv_opreme": "HiLook NVR-104H-D mini Pentabrid FHD 4 kanalni NVR", "jedinica_mere": "kom", "nabavna_cena_rsd": 5745.6, "marza_procenat": 20, "aktivan": true}, {"id": "nvr-010", "kategorija": "NVR snimači", "naziv": "HILOOK NVR-108H-D 8 KANALNI MINI NVR", "naziv_opreme": "HiLook NVR-108H-D mini Pentabrid FHD 8 kanalni NVR", "jedinica_mere": "kom", "nabavna_cena_rsd": 7305.12, "marza_procenat": 20, "aktivan": true}, {"id": "nvr-011", "kategorija": "NVR snimači", "naziv": "TIANDY TC-R3105 NVR ZA 5 IP KAMERA DO 5MP", "naziv_opreme": "Tiandy TC-R3105 NVR snimač za 5 IP kamera do 5MP sa 4 POE porta", "jedinica_mere": "kom", "nabavna_cena_rsd": 7524.0, "marza_procenat": 20, "aktivan": true}, {"id": "nvr-012", "kategorija": "NVR snimači", "naziv": "HIKVISION DS-7604NXI-K1(D) 4 KANALNI NVR SNIMAČ", "naziv_opreme": "HikVision DS-7604NXI-K1(D) 4 kanalni mrežni NVR snimač", "jedinica_mere": "kom", "nabavna_cena_rsd": 12735.36, "marza_procenat": 20, "aktivan": true}, {"id": "sw-001", "kategorija": "Svičevi", "naziv": "DAHUA CS4218-16ET-135 16 PORTNI 10/100MB SWITCH", "naziv_opreme": "Dahua CS4218-16ET-135 POE 16 portni 10/100Mb switch sa dva UP...", "jedinica_mere": "kom", "nabavna_cena_rsd": 14651.28, "marza_procenat": 20, "aktivan": true}, {"id": "sw-002", "kategorija": "Svičevi", "naziv": "DAHUA PFS4218-16ET-240 16 PORTNI 10/100MB SWITCH", "naziv_opreme": "Dahua PFS4218-16ET-240 POE 16 portni 10/100Mb switch sa dva UP...", "jedinica_mere": "kom", "nabavna_cena_rsd": 23133.6, "marza_procenat": 20, "aktivan": true}, {"id": "sw-003", "kategorija": "Svičevi", "naziv": "DAHUA CS4226-24ET-240 24 PORTNI 10/100MB SWITCH", "naziv_opreme": "Dahua CS4226-24ET-240 POE 24 portni 10/100Mb switch sa dva UP...", "jedinica_mere": "kom", "nabavna_cena_rsd": null, "marza_procenat": 20, "aktivan": true}, {"id": "sw-004", "kategorija": "Svičevi", "naziv": "DAHUA 8-PORTNI 10/100MB MINI SWITCH", "naziv_opreme": "Dahua DH-PFS3008-8ET-L 8-portni 10/100Mb mini switch", "jedinica_mere": "kom", "nabavna_cena_rsd": null, "marza_procenat": 20, "aktivan": true}, {"id": "sw-005", "kategorija": "Svičevi", "naziv": "DAHUA CS4010-8GT-110 10 PORTNI 10/100/1000MB SWITCH", "naziv_opreme": "Dahua CS4010-8GT-110 POE 10 portni 10/100/1000Mb switch sa dv...", "jedinica_mere": "kom", "nabavna_cena_rsd": 8790.77, "marza_procenat": 20, "aktivan": true}, {"id": "sw-006", "kategorija": "Svičevi", "naziv": "MERCUSYS POE 1000MB SWITCH SA 16+4 PORTA", "naziv_opreme": "Mercusys MS120GP brzine 1000Mb switch sa 16 POE portova + 2 GB...", "jedinica_mere": "kom", "nabavna_cena_rsd": 16984.86, "marza_procenat": 20, "aktivan": true}, {"id": "sw-007", "kategorija": "Svičevi", "naziv": "DAHUA PFS3110-8ET-96 8PORTNI 10/100MB SWITCH", "naziv_opreme": "Dahua PFS3110-8ET-96 POE 8 portni 10/100Mb switch sa UP Linkom i...", "jedinica_mere": "kom", "nabavna_cena_rsd": 9870.34, "marza_procenat": 20, "aktivan": true}, {"id": "sw-008", "kategorija": "Svičevi", "naziv": "HIKVISION POE 8 PORTNI 10/100/1000MB SWITCH", "naziv_opreme": "HikVision DS-3E0510HP-E, POE 8 portni 10/100/1000Mb switch", "jedinica_mere": "kom", "nabavna_cena_rsd": 12520.8, "marza_procenat": 20, "aktivan": true}, {"id": "sw-009", "kategorija": "Svičevi", "naziv": "DAHUA CS4006-4ET-60 4 PORTNI 10/100MB SWITCH", "naziv_opreme": "Dahua CS4006-4ET-60 POE 4 portni 10/100Mb switch sa dva UP...", "jedinica_mere": "kom", "nabavna_cena_rsd": 4164.05, "marza_procenat": 20, "aktivan": true}, {"id": "sw-010", "kategorija": "Svičevi", "naziv": "HIKVISION POE 4 PORTNI 10/100/1000MB SWITCH", "naziv_opreme": "HikVision DS-3E0505P-E/M, POE 4 portni 10/100/1000Mb switch", "jedinica_mere": "kom", "nabavna_cena_rsd": 5867.28, "marza_procenat": 20, "aktivan": true}, {"id": "sw-011", "kategorija": "Svičevi", "naziv": "DAHUA CS4010-8ET-110 8 PORTNI 10/100MB SWITCH", "naziv_opreme": "Dahua CS4010-8ET-110 POE 8 portni 10/100Mb switch sa dva UP Linka o...", "jedinica_mere": "kom", "nabavna_cena_rsd": 6785.86, "marza_procenat": 20, "aktivan": true}, {"id": "sw-012", "kategorija": "Svičevi", "naziv": "HIKVISION POE 8 PORTNI 10/100MB SWITCH", "naziv_opreme": "HikVision DS-3E1310HP-EI, POE 8 portni 10/100/1000Mb switch", "jedinica_mere": "kom", "nabavna_cena_rsd": 8226.72, "marza_procenat": 20, "aktivan": true}, {"id": "sw-013", "kategorija": "Svičevi", "naziv": "DAHUA 5-PORTNI 10/100MB MINI SWITCH", "naziv_opreme": "Dahua DH-SF1005 5-portni 10/100Mb mini switch", "jedinica_mere": "kom", "nabavna_cena_rsd": 1240.92, "marza_procenat": 20, "aktivan": true}, {"id": "sw-014", "kategorija": "Svičevi", "naziv": "TP-LINK 8-PORTNI 10/100MB SWITCH", "naziv_opreme": "TP-Link TP-SF1008D, 8-portni 10/100Mb switch VER.12", "jedinica_mere": "kom", "nabavna_cena_rsd": 1727.28, "marza_procenat": 20, "aktivan": true}, {"id": "sw-015", "kategorija": "Svičevi", "naziv": "MERCUSYS 10/100/1000MB SWITCH SA 16 PORTOVA", "naziv_opreme": "Mercusys MS116GS brzine 10/100/1000Mb switch sa 16 portova", "jedinica_mere": "kom", "nabavna_cena_rsd": 5673.78, "marza_procenat": 20, "aktivan": true}, {"id": "sw-016", "kategorija": "Svičevi", "naziv": "HIKVISION POE 4 PORTNI 10/100MB SWITCH", "naziv_opreme": "HikVision DS-3E1105P-EI/M, POE 4 portni 10/100Mb switch", "jedinica_mere": "kom", "nabavna_cena_rsd": 4178.88, "marza_procenat": 20, "aktivan": true}, {"id": "sw-017", "kategorija": "Svičevi", "naziv": "MERCUSYS 10/100MB MINI SWITCH SA 5 PORTOVA", "naziv_opreme": "Mercusys MS105 brzine 10/100Mb mini switch sa 5 portova", "jedinica_mere": "kom", "nabavna_cena_rsd": 752.4, "marza_procenat": 20, "aktivan": true}, {"id": "sw-018", "kategorija": "Svičevi", "naziv": "MERCUSYS 10/100MB MINI SWITCH SA 8 PORTOVA", "naziv_opreme": "Mercusys MS108 brzine 10/100Mb mini switch sa 8 portova", "jedinica_mere": "kom", "nabavna_cena_rsd": 953.04, "marza_procenat": 20, "aktivan": true}, {"id": "sw-019", "kategorija": "Svičevi", "naziv": "MERCUSYS 10/100/1000MB MINI SWITCH SA 5 PORTOVA", "naziv_opreme": "Mercusys MS105G brzine 10/100/1000Mb mini switch sa 5...", "jedinica_mere": "kom", "nabavna_cena_rsd": 1134.3, "marza_procenat": 20, "aktivan": true}, {"id": "sw-020", "kategorija": "Svičevi", "naziv": "MERCUSYS 10/100/1000MB MINI SWITCH SA 8 PORTOVA", "naziv_opreme": "Mercusys MS108G brzine 10/100/1000Mb mini switch sa 8...", "jedinica_mere": "kom", "nabavna_cena_rsd": 1761.3, "marza_procenat": 20, "aktivan": true}, {"id": "hdd-001", "kategorija": "HDD", "naziv": "HDD ZA DVR WD PURPLE 500GB", "naziv_opreme": "HDD za DVR Western Digital Purple 500GB", "jedinica_mere": "kom", "nabavna_cena_rsd": 3160.08, "marza_procenat": 20, "aktivan": true}, {"id": "hdd-002", "kategorija": "HDD", "naziv": "HDD ZA DVR WD PURPLE 2TB", "naziv_opreme": "HDD za DVR WD Purple 2TB za video nadzor do 64 HD...", "jedinica_mere": "kom", "nabavna_cena_rsd": 10841.4, "marza_procenat": 20, "aktivan": true}, {"id": "hdd-003", "kategorija": "HDD", "naziv": "HDD ZA DVR SEAGATE SKYHAWK 3TB", "naziv_opreme": "HDD za DVR Seagate SKYHAWK 3TB 3.5 inča za video nadzor", "jedinica_mere": "kom", "nabavna_cena_rsd": 12982.32, "marza_procenat": 20, "aktivan": true}, {"id": "hdd-004", "kategorija": "HDD", "naziv": "HDD ZA DVR WD PURPLE 3TB", "naziv_opreme": "HDD za DVR WD Purple 3TB za video nadzor do 64 HD...", "jedinica_mere": "kom", "nabavna_cena_rsd": 14592.0, "marza_procenat": 20, "aktivan": true}, {"id": "hdd-005", "kategorija": "HDD", "naziv": "HDD ZA DVR WD PURPLE 4TB", "naziv_opreme": "HDD za DVR WD Purple 4TB za video nadzor do 64 HD...", "jedinica_mere": "kom", "nabavna_cena_rsd": 20710.38, "marza_procenat": 20, "aktivan": true}, {"id": "hdd-006", "kategorija": "HDD", "naziv": "HDD ZA DVR WD PURPLE 6TB", "naziv_opreme": "HDD za DVR WD Purple 6TB za video nadzor do 64 HD...", "jedinica_mere": "kom", "nabavna_cena_rsd": 33345.0, "marza_procenat": 20, "aktivan": true}, {"id": "hdd-007", "kategorija": "HDD", "naziv": "HDD ZA DVR SEAGATE BARRACUDA 8TB", "naziv_opreme": "HDD za DVR Seagate BARRACUDA 8TB 3.5 inča za video nadzor", "jedinica_mere": "kom", "nabavna_cena_rsd": 34317.42, "marza_procenat": 20, "aktivan": true}, {"id": "hdd-008", "kategorija": "HDD", "naziv": "HDD ZA DVR SEAGATE SKYHAWK 2TB", "naziv_opreme": "HDD za DVR Seagate SKYHAWK 2TB 3.5 inča za video nadzor", "jedinica_mere": "kom", "nabavna_cena_rsd": 15223.56, "marza_procenat": 20, "aktivan": true}, {"id": "hdd-009", "kategorija": "HDD", "naziv": "HDD ZA DVR SEAGATE 500GB 5900 RPM", "naziv_opreme": "HDD za DVR Seagate F-series 500GB", "jedinica_mere": "kom", "nabavna_cena_rsd": 2164.86, "marza_procenat": 20, "aktivan": true}, {"id": "hdd-010", "kategorija": "HDD", "naziv": "HDD ZA DVR TOSHIBA 500GB", "naziv_opreme": "HDD za DVR Toshiba 500GB", "jedinica_mere": "kom", "nabavna_cena_rsd": 2164.86, "marza_procenat": 20, "aktivan": true}, {"id": "mnt-001", "kategorija": "Nosači za kamere", "naziv": "DAHUA PFA121 NOSAČ ZA KAMERU", "naziv_opreme": "DAHUA zidni nosač bullet kamere model PFA121, aluminijum", "jedinica_mere": "kom", "nabavna_cena_rsd": 1850.69, "marza_procenat": 20, "aktivan": true}, {"id": "mnt-002", "kategorija": "Nosači za kamere", "naziv": "DAHUA PFA150 NOSAČ ZA PTZ KAMERU", "naziv_opreme": "DAHUA PFA150 nosač za PTZ kameru, stubni nosač kamere od...", "jedinica_mere": "kom", "nabavna_cena_rsd": 2621.81, "marza_procenat": 20, "aktivan": true}, {"id": "mnt-003", "kategorija": "Nosači za kamere", "naziv": "UNIVERZALNI NOSAČ ZA KAMERU OKRUGLI 6 BELI", "naziv_opreme": "Univerzalni nosač za kameru okrugli, plastični za baze do 95 m...", "jedinica_mere": "kom", "nabavna_cena_rsd": 244.08, "marza_procenat": 20, "aktivan": true}, {"id": "mnt-004", "kategorija": "Nosači za kamere", "naziv": "UNIVERZALNI NOSAČ ZA KAMERU", "naziv_opreme": "Univerzalni nosač za kamere", "jedinica_mere": "kom", "nabavna_cena_rsd": 431.28, "marza_procenat": 20, "aktivan": true}, {"id": "mnt-005", "kategorija": "Nosači za kamere", "naziv": "DAHUA PFA152-E NOSAČ ZA KAMERU", "naziv_opreme": "DAHUA PFA152-E nosač za kameru, stubni nosač kamere bullet...", "jedinica_mere": "kom", "nabavna_cena_rsd": 1310.9, "marza_procenat": 20, "aktivan": true}, {"id": "mnt-006", "kategorija": "Nosači za kamere", "naziv": "DAHUA PFA130-E NOSAČ ZA KAMERU", "naziv_opreme": "DAHUA zidni nosač bullet kamere model PFA130-E, aluminijum", "jedinica_mere": "kom", "nabavna_cena_rsd": 1388.02, "marza_procenat": 20, "aktivan": true}, {"id": "mnt-007", "kategorija": "Nosači za kamere", "naziv": "HIKVISION DS-1280ZJ-S NOSAČ ZA KAMERU", "naziv_opreme": "HIKVISION DS-1280ZJ-S aluminijumski nosač za kameru", "jedinica_mere": "kom", "nabavna_cena_rsd": 1764.0, "marza_procenat": 20, "aktivan": true}, {"id": "mnt-008", "kategorija": "Nosači za kamere", "naziv": "DAHUA PFA122 NOSAČ ZA KAMERU", "naziv_opreme": "DAHUA zidni nosač bullet kamere model PFA122, aluminijum", "jedinica_mere": "kom", "nabavna_cena_rsd": 1696.46, "marza_procenat": 20, "aktivan": true}, {"id": "mnt-009", "kategorija": "Nosači za kamere", "naziv": "HIKVISION DS-1280ZJ-XS NOSAČ ZA KAMERU", "naziv_opreme": "HIKVISION DS-1280ZJ-XS aluminijumski nosač za kameru", "jedinica_mere": "kom", "nabavna_cena_rsd": 1338.48, "marza_procenat": 20, "aktivan": true}, {"id": "mnt-010", "kategorija": "Nosači za kamere", "naziv": "HIKVISION DS-1280ZJ-DM46 NOSAČ ZA KAMERU", "naziv_opreme": "HIKVISION DS-1280ZJ-DM46 aluminijumski nosač za kameru", "jedinica_mere": "kom", "nabavna_cena_rsd": 1367.28, "marza_procenat": 20, "aktivan": true}, {"id": "mnt-011", "kategorija": "Nosači za kamere", "naziv": "DAHUA PFB2204W NOSAČ ZA KAMERU", "naziv_opreme": "DAHUA zidni nosač bullet kamere model PFB2204W aluminijum", "jedinica_mere": "kom", "nabavna_cena_rsd": 1233.79, "marza_procenat": 20, "aktivan": true}, {"id": "mnt-012", "kategorija": "Nosači za kamere", "naziv": "DAHUA PFB2203W NOSAČ ZA KAMERU", "naziv_opreme": "DAHUA zidni nosač bullet kamere model PFB2203W aluminijum", "jedinica_mere": "kom", "nabavna_cena_rsd": 1233.79, "marza_procenat": 20, "aktivan": true}, {"id": "mnt-013", "kategorija": "Nosači za kamere", "naziv": "BPC PFA130-E NOSAČ ZA KAMERU", "naziv_opreme": "BPC zidni nosač bullet kamere model PFA130-E, aluminijum", "jedinica_mere": "kom", "nabavna_cena_rsd": 1007.28, "marza_procenat": 20, "aktivan": true}, {"id": "mnt-014", "kategorija": "Nosači za kamere", "naziv": "BPC PFB203W NOSAČ ZA KAMERU", "naziv_opreme": "BPC zidni nosač dome kamere model PFB203W, aluminijum", "jedinica_mere": "kom", "nabavna_cena_rsd": 1007.28, "marza_procenat": 20, "aktivan": true}, {"id": "mnt-015", "kategorija": "Nosači za kamere", "naziv": "DAHUA PFA137 NOSAČ ZA KAMERU", "naziv_opreme": "DAHUA zidni nosač bullet kamere model PFA137, aluminijum", "jedinica_mere": "kom", "nabavna_cena_rsd": 925.34, "marza_procenat": 20, "aktivan": true}, {"id": "mnt-016", "kategorija": "Nosači za kamere", "naziv": "DAHUA PFA13G NOSAČ ZA KAMERU", "naziv_opreme": "DAHUA zidni nosač bullet kamere model PFA13G, aluminijum", "jedinica_mere": "kom", "nabavna_cena_rsd": 1002.46, "marza_procenat": 20, "aktivan": true}, {"id": "mnt-017", "kategorija": "Nosači za kamere", "naziv": "DAHUA PFA134 NOSAČ ZA KAMERU", "naziv_opreme": "DAHUA zidni nosač bullet kamere model PFA134, aluminijum", "jedinica_mere": "kom", "nabavna_cena_rsd": 732.24, "marza_procenat": 20, "aktivan": true}, {"id": "mnt-018", "kategorija": "Nosači za kamere", "naziv": "DAHUA PFA139 NOSAČ ZA KAMERU", "naziv_opreme": "DAHUA zidni nosač bullet kamere model PFA139 aluminijum", "jedinica_mere": "kom", "nabavna_cena_rsd": 732.24, "marza_procenat": 20, "aktivan": true}, {"id": "mnt-019", "kategorija": "Nosači za kamere", "naziv": "BPC DS-1280ZJ-XS NOSAČ ZA KAMERU", "naziv_opreme": "BPC DS-1280ZJ-XS aluminijumski nosač za kameru", "jedinica_mere": "kom", "nabavna_cena_rsd": 906.48, "marza_procenat": 20, "aktivan": true}, {"id": "mnt-020", "kategorija": "Nosači za kamere", "naziv": "DAHUA PFA136 NOSAČ ZA KAMERU", "naziv_opreme": "DAHUA zidni nosač bullet kamere model PFA136, aluminijum", "jedinica_mere": "kom", "nabavna_cena_rsd": 848.23, "marza_procenat": 20, "aktivan": true}, {"id": "mnt-021", "kategorija": "Nosači za kamere", "naziv": "UNIVERZALNI ALU NOSAČ ZA KAMERU OKRUGLI 4 BELI", "naziv_opreme": "Univerzalni aluminijumski nosač za kameru okrugli, za baze do 95mm...", "jedinica_mere": "kom", "nabavna_cena_rsd": 575.28, "marza_procenat": 20, "aktivan": true}, {"id": "mnt-022", "kategorija": "Nosači za kamere", "naziv": "UNIVERZALNI ALU NOSAČ ZA KAMERU OKRUGLI 5 BELI", "naziv_opreme": "Univerzalni aluminijumski nosač za kameru okrugli, za baze do 105m...", "jedinica_mere": "kom", "nabavna_cena_rsd": 618.48, "marza_procenat": 20, "aktivan": true}, {"id": "mnt-023", "kategorija": "Nosači za kamere", "naziv": "DAHUA PFA135 NOSAČ ZA KAMERU", "naziv_opreme": "DAHUA zidni nosač bullet kamere model PFA135, aluminijum", "jedinica_mere": "kom", "nabavna_cena_rsd": 616.9, "marza_procenat": 20, "aktivan": true}, {"id": "mnt-024", "kategorija": "Nosači za kamere", "naziv": "BPC PFA134 NOSAČ ZA KAMERU", "naziv_opreme": "BPC zidni nosač bullet kamere model PFA134, aluminijum", "jedinica_mere": "kom", "nabavna_cena_rsd": 719.28, "marza_procenat": 20, "aktivan": true}, {"id": "mnt-025", "kategorija": "Nosači za kamere", "naziv": "UNIVERZALNI NOSAČ ZA KAMERU OKRUGLI 3 CRNI", "naziv_opreme": "Univerzalni nosač za kameru okrugli, plastični za baze do 105m...", "jedinica_mere": "kom", "nabavna_cena_rsd": 236.88, "marza_procenat": 20, "aktivan": true}, {"id": "mnt-026", "kategorija": "Nosači za kamere", "naziv": "UNIVERZALNI NOSAČ ZA KAMERU VEĆI", "naziv_opreme": "Univerzalni nosač za kameru-veći, plastični za baze do 105mm", "jedinica_mere": "kom", "nabavna_cena_rsd": 239.76, "marza_procenat": 20, "aktivan": true}, {"id": "mnt-027", "kategorija": "Nosači za kamere", "naziv": "BPC PFA12A NOSAČ ZA KAMERU", "naziv_opreme": "BPC zidni nosač bullet kamere model PFA12A, PVC", "jedinica_mere": "kom", "nabavna_cena_rsd": 308.88, "marza_procenat": 20, "aktivan": true}, {"id": "mnt-028", "kategorija": "Nosači za kamere", "naziv": "DAHUA PFA12A NOSAČ ZA KAMERU", "naziv_opreme": "DAHUA zidni nosač bullet kamere model PFA12A, PVC", "jedinica_mere": "kom", "nabavna_cena_rsd": 515.16, "marza_procenat": 20, "aktivan": true}, {"id": "mnt-029", "kategorija": "Nosači za kamere", "naziv": "UNIVERZALNI NOSAČ ZA KAMERU MANJI", "naziv_opreme": "Univerzalni nosač za kameru-manji, plastični za baze do 80mm", "jedinica_mere": "kom", "nabavna_cena_rsd": 177.84, "marza_procenat": 20, "aktivan": true}, {"id": "mnt-030", "kategorija": "Nosači za kamere", "naziv": "UNIVERZALNI NOSAČ ZA KAMERU OKRUGLI 1", "naziv_opreme": "Univerzalni nosač za kameru okrugli, plastični za baze do 105m...", "jedinica_mere": "kom", "nabavna_cena_rsd": 190.08, "marza_procenat": 20, "aktivan": true}, {"id": "mnt-031", "kategorija": "Nosači za kamere", "naziv": "UNIVERZALNI NOSAČ ZA KAMERU OKRUGLI 2", "naziv_opreme": "Univerzalni nosač za kameru okrugli, plastični za baze do 90mm...", "jedinica_mere": "kom", "nabavna_cena_rsd": 233.28, "marza_procenat": 20, "aktivan": true}, {"id": "mnt-032", "kategorija": "Nosači za kamere", "naziv": "UNIVERZALNI NOSAČ ZA KAMERU OKRUGLI 3 BELI", "naziv_opreme": "Univerzalni nosač za kameru okrugli, plastični za baze do 105m...", "jedinica_mere": "kom", "nabavna_cena_rsd": 236.88, "marza_procenat": 20, "aktivan": true}, {"id": "cab-001", "kategorija": "Kablovi", "naziv": "BNC NA BNC PATCH KABL 2M", "naziv_opreme": "BNC muški na BNC muški patch kabl dužine 2m za video nadzor", "jedinica_mere": "kom", "nabavna_cena_rsd": 200.16, "marza_procenat": 20, "aktivan": true}, {"id": "cab-002", "kategorija": "Kablovi", "naziv": "UTP CAT5E PATCH KABL 10M", "naziv_opreme": "UTP CAT5E patch kabl dužine 10m za mrežnu opremu sa RJ45...", "jedinica_mere": "kom", "nabavna_cena_rsd": 275.76, "marza_procenat": 20, "aktivan": true}, {"id": "cab-003", "kategorija": "Kablovi", "naziv": "UTP CAT5E PATCH KABL 20M", "naziv_opreme": "UTP CAT5E patch kabl dužine 20m za mrežnu opremu sa RJ45...", "jedinica_mere": "kom", "nabavna_cena_rsd": 408.24, "marza_procenat": 20, "aktivan": true}, {"id": "cab-004", "kategorija": "Kablovi", "naziv": "UTP CAT5E PATCH KABL 0.3M", "naziv_opreme": "UTP CAT5E patch kabl dužine 0.3m za mrežnu opremu sa RJ45...", "jedinica_mere": "kom", "nabavna_cena_rsd": 55.3, "marza_procenat": 20, "aktivan": true}, {"id": "cab-005", "kategorija": "Kablovi", "naziv": "BNC NA BNC PATCH KABL 0.5M", "naziv_opreme": "BNC muški na BNC muški patch kabl dužine 0.5m za video nadzor", "jedinica_mere": "kom", "nabavna_cena_rsd": 128.88, "marza_procenat": 20, "aktivan": true}, {"id": "cab-006", "kategorija": "Kablovi", "naziv": "UTP CAT5E PATCH KABL 5M", "naziv_opreme": "UTP CAT5E patch kabl dužine 5m za mrežnu opremu sa RJ45...", "jedinica_mere": "kom", "nabavna_cena_rsd": 135.36, "marza_procenat": 20, "aktivan": true}, {"id": "cab-007", "kategorija": "Kablovi", "naziv": "BNC NA BNC PATCH KABL 1M", "naziv_opreme": "BNC muški na BNC muški patch kabl dužine 1m za video nadzor", "jedinica_mere": "kom", "nabavna_cena_rsd": 157.68, "marza_procenat": 20, "aktivan": true}, {"id": "cab-008", "kategorija": "Kablovi", "naziv": "UTP CAT6 PATCH KABL 5M", "naziv_opreme": "UTP CAT6 patch kabl dužine 5m za mrežnu opremu sa RJ45...", "jedinica_mere": "kom", "nabavna_cena_rsd": 198.0, "marza_procenat": 20, "aktivan": true}, {"id": "cab-009", "kategorija": "Kablovi", "naziv": "UTP CAT6 PATCH KABL 2M", "naziv_opreme": "UTP CAT6 patch kabl dužine 2m za mrežnu opremu sa RJ45...", "jedinica_mere": "kom", "nabavna_cena_rsd": 93.6, "marza_procenat": 20, "aktivan": true}, {"id": "cab-010", "kategorija": "Kablovi", "naziv": "UTP CAT5E PATCH KABL 3M", "naziv_opreme": "UTP CAT5E patch kabl dužine 3m za mrežnu opremu sa RJ45...", "jedinica_mere": "kom", "nabavna_cena_rsd": 105.84, "marza_procenat": 20, "aktivan": true}, {"id": "cab-011", "kategorija": "Kablovi", "naziv": "UTP CAT6 PATCH KABL 1.5M", "naziv_opreme": "UTP CAT6 patch kabl dužine 1.5m za mrežnu opremu sa RJ45...", "jedinica_mere": "kom", "nabavna_cena_rsd": 110.16, "marza_procenat": 20, "aktivan": true}, {"id": "cab-012", "kategorija": "Kablovi", "naziv": "UTP CAT6 PATCH KABL 3M", "naziv_opreme": "UTP CAT6 patch kabl dužine 3m za mrežnu opremu sa RJ45...", "jedinica_mere": "kom", "nabavna_cena_rsd": 127.44, "marza_procenat": 20, "aktivan": true}, {"id": "cab-013", "kategorija": "Kablovi", "naziv": "UTP CAT5E PATCH KABL 1M", "naziv_opreme": "UTP CAT5E patch kabl dužine 1m za mrežnu opremu sa RJ45...", "jedinica_mere": "kom", "nabavna_cena_rsd": 62.64, "marza_procenat": 20, "aktivan": true}, {"id": "cab-014", "kategorija": "Kablovi", "naziv": "UTP CAT5E PATCH KABL 2M", "naziv_opreme": "UTP CAT5E patch kabl dužine 2m za mrežnu opremu sa RJ45...", "jedinica_mere": "kom", "nabavna_cena_rsd": 73.44, "marza_procenat": 20, "aktivan": true}, {"id": "cab-015", "kategorija": "Kablovi", "naziv": "UTP CAT5E PATCH KABL 1.5M", "naziv_opreme": "UTP CAT5E patch kabl dužine 1.5m za mrežnu opremu sa RJ45...", "jedinica_mere": "kom", "nabavna_cena_rsd": 74.16, "marza_procenat": 20, "aktivan": true}, {"id": "cab-016", "kategorija": "Kablovi", "naziv": "UTP CAT6 PATCH KABL 1M", "naziv_opreme": "UTP CAT6 patch kabl dužine 1m za mrežnu opremu sa RJ45...", "jedinica_mere": "kom", "nabavna_cena_rsd": 80.64, "marza_procenat": 20, "aktivan": true}, {"id": "cab-017", "kategorija": "Kablovi", "naziv": "UTP CAT5E PATCH KABL 0.25M", "naziv_opreme": "UTP CAT5E patch kabl dužine 0.25m za mrežnu opremu sa RJ45...", "jedinica_mere": "kom", "nabavna_cena_rsd": 44.64, "marza_procenat": 20, "aktivan": true}, {"id": "cab-018", "kategorija": "Kablovi", "naziv": "UTP CAT5E PATCH KABL 0.5M", "naziv_opreme": "UTP CAT5E patch kabl dužine 0.5m za mrežnu opremu sa RJ45...", "jedinica_mere": "kom", "nabavna_cena_rsd": 45.36, "marza_procenat": 20, "aktivan": true}, {"id": "cab-019", "kategorija": "Kablovi", "naziv": "UTP CAT6 PATCH KABL 0.25M", "naziv_opreme": "UTP CAT6 patch kabl dužine 0.25m za mrežnu opremu sa RJ45...", "jedinica_mere": "kom", "nabavna_cena_rsd": 53.93, "marza_procenat": 20, "aktivan": true}, {"id": "cab-020", "kategorija": "Kablovi", "naziv": "UTP CAT6 PATCH KABL 0.5M", "naziv_opreme": "UTP CAT6 patch kabl dužine 0.5m za mrežnu opremu sa RJ45...", "jedinica_mere": "kom", "nabavna_cena_rsd": 61.2, "marza_procenat": 20, "aktivan": true}, {"id": "cab-021", "kategorija": "Kablovi", "naziv": "FTP KABL CAT5E CU 305M WALL", "naziv_opreme": "FTP mrežni kabl CAT5E CU 305m drveni kotur wall", "jedinica_mere": "kotur (305m)", "nabavna_cena_rsd": 12934.44, "marza_procenat": 20, "aktivan": true}, {"id": "cab-022", "kategorija": "Kablovi", "naziv": "FTP KABL CAT6 CU 305M WALL", "naziv_opreme": "FTP mrežni kabl CAT6 CU 305m na drvenom koturu wall", "jedinica_mere": "kotur (305m)", "nabavna_cena_rsd": 17546.04, "marza_procenat": 20, "aktivan": true}, {"id": "cab-023", "kategorija": "Kablovi", "naziv": "S/FTP KABL CAT7 CU 305M WALL", "naziv_opreme": "S/FTP mrežni kabl CAT7 CU 305m na drvenom koturu wall bakarni", "jedinica_mere": "kotur (305m)", "nabavna_cena_rsd": 25451.64, "marza_procenat": 20, "aktivan": true}, {"id": "chn-001", "kategorija": "Kanalice", "naziv": "KANALICA PODNA SAMOLEPLJIVA 50×12 MM", "naziv_opreme": "Podna PVC kanalica sa širokom samolepljivom trakom 50×12 mm", "jedinica_mere": "kom", "nabavna_cena_rsd": 582.48, "marza_procenat": 20, "aktivan": true}, {"id": "chn-002", "kategorija": "Kanalice", "naziv": "KANALICA PODNA SAMOLEPLJIVA 70×20 MM", "naziv_opreme": "Podna PVC kanalica sa širokom samolepljivom trakom 70×20 mm", "jedinica_mere": "kom", "nabavna_cena_rsd": 704.88, "marza_procenat": 20, "aktivan": true}, {"id": "chn-003", "kategorija": "Kanalice", "naziv": "KANALICA PODNA 50×12 MM", "naziv_opreme": "Podna PVC kanalica bez samolepljive trake 50×12 mm", "jedinica_mere": "kom", "nabavna_cena_rsd": 503.28, "marza_procenat": 20, "aktivan": true}, {"id": "chn-004", "kategorija": "Kanalice", "naziv": "KANALICA PODNA 70×20 MM", "naziv_opreme": "Podna PVC kanalica BEZ samolepljive trake 70×20 mm", "jedinica_mere": "kom", "nabavna_cena_rsd": 647.28, "marza_procenat": 20, "aktivan": true}, {"id": "chn-005", "kategorija": "Kanalice", "naziv": "KANALICE SAMOLEPLJIVE 40×25 MM", "naziv_opreme": "PVC samolepljive kanalice sa rupama 40×25 mm", "jedinica_mere": "kom", "nabavna_cena_rsd": 193.68, "marza_procenat": 20, "aktivan": true}, {"id": "chn-006", "kategorija": "Kanalice", "naziv": "KANALICE SAMOLEPLJIVE 40×40 MM", "naziv_opreme": "PVC samolepljive kanalice sa rupama 40×40 mm", "jedinica_mere": "kom", "nabavna_cena_rsd": 308.88, "marza_procenat": 20, "aktivan": true}, {"id": "chn-007", "kategorija": "Kanalice", "naziv": "KANALICE SAMOLEPLJIVE 60×40 MM", "naziv_opreme": "PVC samolepljive kanalice sa rupama 60×40 mm", "jedinica_mere": "kom", "nabavna_cena_rsd": 352.08, "marza_procenat": 20, "aktivan": true}, {"id": "chn-008", "kategorija": "Kanalice", "naziv": "KANALICE SAMOLEPLJIVE 60×60 MM", "naziv_opreme": "PVC samolepljive kanalice sa rupama 60×60 mm", "jedinica_mere": "kom", "nabavna_cena_rsd": 409.68, "marza_procenat": 20, "aktivan": true}, {"id": "chn-009", "kategorija": "Kanalice", "naziv": "KANALICE SAMOLEPLJIVE 25×16 MM", "naziv_opreme": "PVC samolepljive kanalice sa rupama 25×16 mm", "jedinica_mere": "kom", "nabavna_cena_rsd": 124.56, "marza_procenat": 20, "aktivan": true}, {"id": "chn-010", "kategorija": "Kanalice", "naziv": "KANALICE SAMOLEPLJIVE 25×25 MM", "naziv_opreme": "PVC samolepljive kanalice sa rupama 25×25 mm", "jedinica_mere": "kom", "nabavna_cena_rsd": 128.88, "marza_procenat": 20, "aktivan": true}, {"id": "chn-011", "kategorija": "Kanalice", "naziv": "KANALICE SAMOLEPLJIVE 30×20 MM", "naziv_opreme": "PVC samolepljive kanalice sa rupama 30×20 mm", "jedinica_mere": "kom", "nabavna_cena_rsd": 143.28, "marza_procenat": 20, "aktivan": true}, {"id": "chn-012", "kategorija": "Kanalice", "naziv": "KANALICE SAMOLEPLJIVE 40×16 MM", "naziv_opreme": "PVC samolepljive kanalice sa rupama 40×16 mm", "jedinica_mere": "kom", "nabavna_cena_rsd": 181.44, "marza_procenat": 20, "aktivan": true}, {"id": "chn-013", "kategorija": "Kanalice", "naziv": "KANALICE SAMOLEPLJIVE 12×12 MM", "naziv_opreme": "PVC samolepljive kanalice sa rupama 12×12 mm dužine 2 metra", "jedinica_mere": "kom", "nabavna_cena_rsd": 85.68, "marza_procenat": 20, "aktivan": true}, {"id": "chn-014", "kategorija": "Kanalice", "naziv": "KANALICE SAMOLEPLJIVE 15×10 MM", "naziv_opreme": "PVC samolepljive kanalice sa rupama 15×10 mm dužine 2 metra", "jedinica_mere": "kom", "nabavna_cena_rsd": 92.88, "marza_procenat": 20, "aktivan": true}, {"id": "chn-015", "kategorija": "Kanalice", "naziv": "KANALICE SAMOLEPLJIVE 16×16 MM", "naziv_opreme": "PVC samolepljive kanalice sa rupama 16×16 mm dužine 2 metra", "jedinica_mere": "kom", "nabavna_cena_rsd": 104.4, "marza_procenat": 20, "aktivan": true}, {"id": "chn-016", "kategorija": "Kanalice", "naziv": "KANALICE SAMOLEPLJIVE 20×10 MM", "naziv_opreme": "PVC samolepljive kanalice sa rupama 20×10 mm dužine 2 metra", "jedinica_mere": "kom", "nabavna_cena_rsd": 119.52, "marza_procenat": 20, "aktivan": true}, {"id": "pwr-001", "kategorija": "Napajanja", "naziv": "NAPAJANJE 12V 10A SA PODRŠKOM ZA BATERIJU", "naziv_opreme": "Napajanje 12V 10A sa podrškom za bateriju, 9 izlaza u kutiji sa ključem", "jedinica_mere": "kom", "nabavna_cena_rsd": 2951.28, "marza_procenat": 20, "aktivan": true}, {"id": "pwr-002", "kategorija": "Napajanja", "naziv": "UPS NAPAJANJE 12V 5A ZA CCTV I ELEKTRO BRAVE", "naziv_opreme": "UPS napajanje za video nadzor, i elektro brave 12V 5A u kutiji sa...", "jedinica_mere": "kom", "nabavna_cena_rsd": 2987.28, "marza_procenat": 20, "aktivan": true}, {"id": "pwr-003", "kategorija": "Napajanja", "naziv": "NAPAJANJE ZA VIDEO NADZOR 12V 15A U KUTIJI", "naziv_opreme": "Napajanje za video nadzor 12V 15A u kutiji sa ključem i osamnaest grana", "jedinica_mere": "kom", "nabavna_cena_rsd": 3023.28, "marza_procenat": 20, "aktivan": true}, {"id": "pwr-004", "kategorija": "Napajanja", "naziv": "NAPAJANJE 12V 15A SA PODRŠKOM ZA BATERIJU", "naziv_opreme": "Napajanje 12V 15A sa podrškom za bateriju, 18 izlaza u kutiji sa ključem", "jedinica_mere": "kom", "nabavna_cena_rsd": 3311.28, "marza_procenat": 20, "aktivan": true}, {"id": "pwr-005", "kategorija": "Napajanja", "naziv": "NAPAJANJE ZA VIDEO NADZOR 12V 20A U KUTIJI", "naziv_opreme": "Napajanje za video nadzor 12V 20A u kutiji sa ključem", "jedinica_mere": "kom", "nabavna_cena_rsd": 3599.28, "marza_procenat": 20, "aktivan": true}, {"id": "mon-001", "kategorija": "Monitori", "naziv": "MONITOR DAHUA LM25-B211B FHD 25 INČA 120HZ", "naziv_opreme": "Monitor Dahua LM25-B211B FHD 25 inča 120Hz 1920×1080 ELED", "jedinica_mere": "kom", "nabavna_cena_rsd": 10714.86, "marza_procenat": 20, "aktivan": true}, {"id": "mon-002", "kategorija": "Monitori", "naziv": "MONITOR DAHUA LM27-A200 FHD 27 INČA 100HZ", "naziv_opreme": "Monitor Dahua LM27-A200 FHD 27 inča 100Hz 1920×1080 ELED", "jedinica_mere": "kom", "nabavna_cena_rsd": 11398.86, "marza_procenat": 20, "aktivan": true}, {"id": "mon-003", "kategorija": "Monitori", "naziv": "MONITOR STARS SOLUTION E03 23.8 INČA LED", "naziv_opreme": "Monitor Stars Solution E03 23.8 inča LED pozadinsko osvetljenje", "jedinica_mere": "kom", "nabavna_cena_rsd": 10366.8, "marza_procenat": 20, "aktivan": true}, {"id": "mon-004", "kategorija": "Monitori", "naziv": "MONITOR XIAOMI MI A24I EU 23.8 INČA IPS", "naziv_opreme": "Monitor Xiaomi Mi A24i EU 23.8 inča IPS pozadinsko osvetljenje", "jedinica_mere": "kom", "nabavna_cena_rsd": 9574.86, "marza_procenat": 20, "aktivan": true}, {"id": "con-001", "kategorija": "Konektori i moduli", "naziv": "RJ45 KONEKTOR ZA LAN KABL CAT5E", "naziv_opreme": "RJ45 konektor CAT5e za mreže do 100 Mb/s za licnasti-fly kabl", "jedinica_mere": "kom", "nabavna_cena_rsd": 10.01, "marza_procenat": 20, "aktivan": true}, {"id": "con-002", "kategorija": "Konektori i moduli", "naziv": "KONEKTOR RJ45 CAT5E ZA UTP SA PUNIM PRESEKOM", "naziv_opreme": "RJ45 konektor CAT5e za mreže do 100 Mb/s za lakše krimpovanje i bol...", "jedinica_mere": "kom", "nabavna_cena_rsd": 10.08, "marza_procenat": 20, "aktivan": true}, {"id": "con-003", "kategorija": "Konektori i moduli", "naziv": "ZAŠTITNA KAPICA ZA KONEKTOR RJ45 ŽUTA", "naziv_opreme": "Zaštitna kapica za RJ45 konektor svih kategorija gumena, žuta", "jedinica_mere": "kom", "nabavna_cena_rsd": 10.08, "marza_procenat": 20, "aktivan": true}, {"id": "con-004", "kategorija": "Konektori i moduli", "naziv": "ZAŠTITNA KAPICA ZA KONEKTOR RJ45 NARANDŽASTA", "naziv_opreme": "Zaštitna kapica za RJ45 konektor svih kategorija gumena...", "jedinica_mere": "kom", "nabavna_cena_rsd": 10.08, "marza_procenat": 20, "aktivan": true}, {"id": "con-005", "kategorija": "Konektori i moduli", "naziv": "MODUL RJ 45 CAT 6A ŽUTI", "naziv_opreme": "Modul RJ 45 za mrežni kabl kategorije 6A žuti", "jedinica_mere": "kom", "nabavna_cena_rsd": 236.88, "marza_procenat": 20, "aktivan": true}, {"id": "con-006", "kategorija": "Konektori i moduli", "naziv": "MODUL RJ 45 CAT 6A NARANDŽASTI", "naziv_opreme": "Modul RJ 45 za mrežni kabl kategorije 6A narandžasti", "jedinica_mere": "kom", "nabavna_cena_rsd": 236.88, "marza_procenat": 20, "aktivan": true}, {"id": "con-007", "kategorija": "Konektori i moduli", "naziv": "MODUL RJ 45 CAT 6A BELI", "naziv_opreme": "Modul RJ 45 za mrežni kabl kategorije 6A beli", "jedinica_mere": "kom", "nabavna_cena_rsd": 236.88, "marza_procenat": 20, "aktivan": true}, {"id": "con-008", "kategorija": "Konektori i moduli", "naziv": "MODUL RJ 45 CAT 6A OKLOPLJENI", "naziv_opreme": "Modul RJ 45 za mrežni kabl kategorije 6A sa širmom", "jedinica_mere": "kom", "nabavna_cena_rsd": 287.28, "marza_procenat": 20, "aktivan": true}];
+    const STORAGE_JOBS_KEY = "protex_rtdb_jobs_v1";
+    const STORAGE_DBURL_KEY = "protex_rtdb_url_v1";
+
+    const baseFirebaseConfig = {
+      apiKey: "AIzaSyA0jRJcfS4GaSTKufWwcsqznnW5OmcuqWQ",
+      authDomain: "protex-1e84d.firebaseapp.com",
+      databaseURL: localStorage.getItem(STORAGE_DBURL_KEY) || "https://protex-1e84d-default-rtdb.firebaseio.com",
+      projectId: "protex-1e84d",
+      storageBucket: "protex-1e84d.firebasestorage.app",
+      messagingSenderId: "670527915248",
+      appId: "1:670527915248:web:18a0a60e0780320b386e35",
+      measurementId: "G-27F59236EG"
+    };
+
+    let catalog = [...DEFAULT_CATALOG];
+    let quoteItems = [];
+    let savedJobs = JSON.parse(localStorage.getItem(STORAGE_JOBS_KEY) || "[]");
+    let db = null;
+
+    function fmtRsd(val) {
+      return (Number(val) || 0).toLocaleString("sr-RS", { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + " RSD";
+    }
+
+    function updateNetBadge() {
+      const el = document.getElementById("netBadge");
+      if (navigator.onLine) {
+        el.textContent = "Online";
+        el.className = "badge ok";
+      } else {
+        el.textContent = "Offline režim";
+        el.className = "badge off";
+      }
+    }
+    window.addEventListener("online", updateNetBadge);
+    window.addEventListener("offline", updateNetBadge);
+
+    async function connectRtdb(dbUrl) {
+      const dbBadge = document.getElementById("dbBadge");
+      const statusEl = document.getElementById("configStatus");
+      try {
+        for (const existing of getApps()) {
+          await deleteApp(existing);
+        }
+        const cfg = { ...baseFirebaseConfig, databaseURL: dbUrl };
+        const app = initializeApp(cfg);
+        db = getDatabase(app);
+
+        // Pratimo status konekcije sa Realtime Database
+        onValue(ref(db, ".info/connected"), (snap) => {
+          if (snap.val() === true) {
+            dbBadge.textContent = "RTDB povezan: protex-1e84d";
+            dbBadge.className = "badge ok";
+            if (statusEl) statusEl.textContent = "Uspešno povezano na " + dbUrl;
+          } else {
+            dbBadge.textContent = "RTDB čeka konekciju / offline";
+            dbBadge.className = "badge off";
+          }
+        });
+
+        // Slušamo katalog iz baze ako postoji
+        onValue(ref(db, "catalog"), (snapshot) => {
+          const val = snapshot.val();
+          if (val) {
+            const list = Array.isArray(val) ? val.filter(Boolean) : Object.values(val);
+            if (list.length > 0) {
+              catalog = list;
+              document.getElementById("catalogCount").textContent = catalog.length;
+              initCategories();
+            }
+          }
+        }, (err) => {
+          if (statusEl) statusEl.textContent = "Greška čitanja /catalog: " + err.message;
+        });
+
+        // Slušamo poslove u realnom vremenu
+        onValue(ref(db, "jobs"), (snapshot) => {
+          const val = snapshot.val();
+          if (val) {
+            savedJobs = Object.values(val).sort((a, b) => (b.updatedAt || "").localeCompare(a.updatedAt || ""));
+          } else {
+            savedJobs = [];
+          }
+          localStorage.setItem(STORAGE_JOBS_KEY, JSON.stringify(savedJobs));
+          renderJobs();
+        }, (err) => {
+          if (statusEl) statusEl.textContent = "Greška čitanja /jobs: " + err.message;
+        });
+
+      } catch (err) {
+        db = null;
+        dbBadge.textContent = "Greška povezivanja";
+        dbBadge.className = "badge off";
+        if (statusEl) statusEl.textContent = "Greška: " + err.message;
+      }
+    }
+
+    window.updateDatabaseUrl = async function () {
+      const url = document.getElementById("dbUrlInput").value.trim().replace(/\/$/, "");
+      if (!url) return;
+      localStorage.setItem(STORAGE_DBURL_KEY, url);
+      await connectRtdb(url);
+    };
+
+    window.seedCatalogToRtdb = async function () {
+      const statusEl = document.getElementById("configStatus");
+      if (!db) {
+        statusEl.textContent = "Baza nije povezana.";
+        return;
+      }
+      try {
+   statusEl.textContent = "Uvoz " + catalog.length + " artikala u /catalog...";
+        const payload = {};
+        for (const item of catalog) {
+          payload[item.id] = item;
+        }
+        await set(ref(db, "catalog"), payload);
+        statusEl.textContent = "Uspešno uvezeno svih " + catalog.length + " artikala u Realtime Database (/catalog).";
+      } catch (e) {
+        statusEl.textContent = "Greška pri uvozu kataloga: " + e.message;
+      }
+    };
+
+    window.initCategories = function () {
+      const cats = ["Sve", ...new Set(catalog.map(x => x.kategorija))];
+      const sel = document.getElementById("catFilter");
+      const prevVal = sel.value;
+      sel.innerHTML = cats.map(c => `<option value="${c}">${c}</option>`).join("");
+      if (cats.includes(prevVal)) sel.value = prevVal;
+      renderCatalogSelect();
+    };
+
+    window.renderCatalogSelect = function () {
+      const cat = document.getElementById("catFilter").value;
+      const q = document.getElementById("searchInput").value.trim().toLowerCase();
+      const filtered = catalog.filter(item => {
+        const matchCat = cat === "Sve" || item.kategorija === cat;
+        const matchText = !q || item.naziv.toLowerCase().includes(q) || item.naziv_opreme.toLowerCase().includes(q);
+        return matchCat && matchText;
+      });
+      const sel = document.getElementById("itemSelect");
+      sel.innerHTML = filtered.map(item => {
+        const p = item.nabavna_cena_rsd != null ? fmtRsd(item.nabavna_cena_rsd) : "Cena nije vidljiva";
+        return `<option value="${item.id}">${item.naziv} (${p})</option>`;
+      }).join("");
+      sel.onchange = showSelectedPreview;
+      showSelectedPreview();
+    };
+
+    window.showSelectedPreview = function () {
+      const id = document.getElementById("itemSelect").value;
+      const item = catalog.find(x => x.id === id);
+      const prev = document.getElementById("selectedPreview");
+      if (!item) { prev.textContent = "Nema rezultata."; return; }
+      const p = item.nabavna_cena_rsd != null ? fmtRsd(item.nabavna_cena_rsd) : "Cena nije vidljiva na slici";
+      prev.textContent = `${item.kategorija} • Nabavna: ${p} — ${item.naziv_opreme}`;
+    };
+
+    window.addSelectedItem = function () {
+      const id = document.getElementById("itemSelect").value;
+      const qty = parseFloat(document.getElementById("itemQty").value);
+      const item = catalog.find(x => x.id === id);
+      if (!item || isNaN(qty) || qty <= 0) return;
+      const existing = quoteItems.find(x => x.id === item.id);
+      if (existing) {
+        existing.qty += qty;
+      } else {
+        quoteItems.push({
+          id: item.id,
+          kategorija: item.kategorija,
+          naziv: item.naziv,
+          unitCost: item.nabavna_cena_rsd || 0,
+          qty: qty
+        });
+      }
+      renderQuote();
+      recalc();
+    };
+
+    window.updateQty = function (idx, val) {
+      const q = parseFloat(val);
+      if (isNaN(q) || q <= 0) {
+        quoteItems.splice(idx, 1);
+      } else {
+        quoteItems[idx].qty = q;
+      }
+      renderQuote();
+      recalc();
+    };
+
+    window.removeItem = function (idx) {
+      quoteItems.splice(idx, 1);
+      renderQuote();
+      recalc();
+    };
+
+    function getMarginMultiplier() {
+      const pct = parseFloat(document.getElementById("marginPct").value) || 0;
+      return 1 + (pct / 100);
+    }
+
+    window.renderQuote = function () {
+      const tbody = document.getElementById("quoteBody");
+      if (!quoteItems.length) {
+        tbody.innerHTML = '<tr><td colspan="5" class="muted">Nema dodatih stavki.</td></tr>';
+        return;
+      }
+      const mult = getMarginMultiplier();
+      tbody.innerHTML = quoteItems.map((it, idx) => {
+        const sellUnit = it.unitCost * mult;
+        const lineTotal = sellUnit * it.qty;
+        return `
+          <tr>
+            <td><strong>${it.naziv}</strong><br><span class="muted">${it.kategorija} • nab.: ${fmtRsd(it.unitCost)}</span></td>
+            <td class="num"><input class="qty-input" type="number" step="any" value="${it.qty}" onchange="updateQty(${idx}, this.value)" /></td>
+            <td class="num">${fmtRsd(sellUnit)}</td>
+            <td class="num"><strong>${fmtRsd(lineTotal)}</strong></td>
+            <td class="num"><button class="btn danger" onclick="removeItem(${idx})">✕</button></td>
+          </tr>
+        `;
+      }).join("");
+    };
+
+    window.recalc = function () {
+      renderQuote();
+      const mult = getMarginMultiplier();
+      const labor = parseFloat(document.getElementById("laborCost").value) || 0;
+      let rawCost = 0;
+      for (const it of quoteItems) rawCost += it.unitCost * it.qty;
+      const equipWithMargin = rawCost * mult;
+      const grandTotal = equipWithMargin + labor;
+
+      document.getElementById("sumCost").textContent = fmtRsd(rawCost);
+      document.getElementById("sumEquip").textContent = fmtRsd(equipWithMargin);
+      document.getElementById("sumGrand").textContent = fmtRsd(grandTotal);
+      return { rawCost, equipWithMargin, labor, grandTotal };
+    };
+
+    window.clearQuote = function () {
+      quoteItems = [];
+      document.getElementById("jobTitle").value = "";
+      document.getElementById("laborCost").value = "0";
+      renderQuote();
+      recalc();
+    };
+
+    window.saveJob = async function () {
+      const title = document.getElementById("jobTitle").value.trim() || ("Posao " + new Date().toLocaleDateString("sr-RS"));
+      const status = document.getElementById("jobStatus").value;
+      const marginPct = parseFloat(document.getElementById("marginPct").value) || 0;
+      const totals = recalc();
+
+      const jobDoc = {
+        id: "job_" + Date.now(),
+        title,
+        status,
+        marginPct,
+        items: quoteItems,
+        totals,
+        updatedAt: new Date().toISOString()
+      };
+
+      savedJobs.unshift(jobDoc);
+      localStorage.setItem(STORAGE_JOBS_KEY, JSON.stringify(savedJobs));
+      renderJobs();
+
+      if (db) {
+        try {
+          await set(ref(db, "jobs/" + jobDoc.id), jobDoc);
+        } catch (e) {
+          alert("Sačuvano lokalno, greška pri slanju u Firebase: " + e.message);
+          return;
+        }
+      }
+      alert("Posao je sačuvan u Firebase (" + title + ").");
+    };
+
+    window.loadJob = function (id) {
+      const job = savedJobs.find(j => j.id === id);
+      if (!job) return;
+      document.getElementById("jobTitle").value = job.title;
+      document.getElementById("jobStatus").value = job.status || "Nacrt";
+      document.getElementById("marginPct").value = job.marginPct ?? 20;
+      document.getElementById("laborCost").value = job.totals?.labor ?? 0;
+      quoteItems = JSON.parse(JSON.stringify(job.items || []));
+      switchTab("calc");
+      renderQuote();
+      recalc();
+    };
+
+    window.deleteJob = async function (id) {
+      savedJobs = savedJobs.filter(j => j.id !== id);
+      localStorage.setItem(STORAGE_JOBS_KEY, JSON.stringify(savedJobs));
+      renderJobs();
+      if (db) {
+        try { await remove(ref(db, "jobs/" + id)); } catch (e) {}
+      }
+    };
+
+    window.renderJobs = function () {
+      document.getElementById("jobsCount").textContent = savedJobs.length;
+      const el = document.getElementById("jobsList");
+      if (!savedJobs.length) {
+        el.innerHTML = '<p class="muted">Nema sačuvanih poslova.</p>';
+        return;
+      }
+      el.innerHTML = savedJobs.map(j => `
+        <div class="job-item">
+          <div>
+            <strong>${j.title}</strong> <span class="badge">${j.status}</span><br>
+            <span class="muted">${new Date(j.updatedAt).toLocaleString("sr-RS")} • Stavki: ${(j.items || []).length}</span>
+          </div>
+          <div style="text-align:right">
+            <div style="font-weight:700;color:#38bdf8;margin-bottom:6px;">${fmtRsd(j.totals?.grandTotal || 0)}</div>
+            <button class="btn secondary" style="padding:5px 10px;font-size:0.8rem;" onclick="loadJob('${j.id}')">Otvori</button>
+            <button class="btn danger" onclick="deleteJob('${j.id}')">Obriši</button>
+          </div>
+        </div>
+      `).join("");
+    };
+
+    window.switchTab = function (tab) {
+      document.getElementById("viewCalc").classList.toggle("hidden", tab !== "calc");
+      document.getElementById("viewJobs").classList.toggle("hidden", tab !== "jobs");
+      document.getElementById("viewConfig").classList.toggle("hidden", tab !== "config");
+      document.getElementById("tabCalc").classList.toggle("active", tab === "calc");
+      document.getElementById("tabJobs").classList.toggle("active", tab === "jobs");
+      document.getElementById("tabConfig").classList.toggle("active", tab === "config");
+    };
+
+    document.getElementById("dbUrlInput").value = baseFirebaseConfig.databaseURL;
+    updateNetBadge();
+    initCategories();
+    renderJobs();
+    recalc();
+    await connectRtdb(baseFirebaseConfig.databaseURL);
+    if ("serviceWorker" in navigator) {
+      window.addEventListener("load", () => {
+        navigator.serviceWorker.register("./sw.js").catch((err) => {
+          console.error("SW registracija nije uspela:", err);
+        });
+      });
+    }
+  </script>
+</body>
+</html>
