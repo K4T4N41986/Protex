@@ -271,7 +271,7 @@
         <h2>Firebase Realtime Database (protex-1e84d)</h2>
         <p class="muted">Tvoj Firebase config je već ugrađen u aplikaciju. Ako se tvoj <code>databaseURL</code> razlikuje od podrazumevanog (npr. <code>europe-west1</code>), možeš ga promeniti ispod i kliknuti <strong>Sačuvaj URL i poveži</strong>.</p>
         <label for="dbUrlInput">Database URL (iz Firebase Realtime Database konzole)</label>
-        <input id="dbUrlInput" type="text" value="https://protex-1e84d-default-rtdb.firebaseio.com" />
+        <input id="dbUrlInput" type="text" value="https://protex-1e84d-default-rtdb.europe-west1.firebasedatabase.app" />
         <div style="margin-top:10px;display:flex;gap:10px;flex-wrap:wrap;">
           <button class="btn" onclick="updateDatabaseUrl()">Sačuvaj URL i poveži</button>
           <button class="btn green" onclick="seedCatalogToRtdb()">Uvezi sve artikle u bazu (/catalog)</button>
@@ -306,7 +306,7 @@
     const baseFirebaseConfig = {
       apiKey: "AIzaSyA0jRJcfS4GaSTKufWwcsqznnW5OmcuqWQ",
       authDomain: "protex-1e84d.firebaseapp.com",
-      databaseURL: localStorage.getItem(STORAGE_DBURL_KEY) || "https://protex-1e84d-default-rtdb.firebaseio.com",
+      databaseURL: localStorage.getItem(STORAGE_DBURL_KEY) || "https://protex-1e84d-default-rtdb.europe-west1.firebasedatabase.app",
       projectId: "protex-1e84d",
       storageBucket: "protex-1e84d.firebasestorage.app",
       messagingSenderId: "670527915248",
